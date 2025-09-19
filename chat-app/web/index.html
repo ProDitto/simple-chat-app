@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-900">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Simple scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+
+        .notification-dot {
+            height: 10px;
+            width: 10px;
+            background-color: #34d399;
+            /* emerald-400 */
+            border-radius: 50%;
+            display: inline-block;
+            position: absolute;
+            top: 50%;
+            right: 1rem;
+            transform: translateY(-50%);
+        }
+    </style>
+</head>
+
+<body class="h-full font-sans text-gray-200 antialiased">
+    <!-- App container -->
+    <div id="app" class="h-full">
+
+        <!-- Login Screen -->
+        <div id="login-view" class="flex items-center justify-center h-full">
+            <div class="w-full max-w-md p-8 space-y-8 bg-gray-800 rounded-lg shadow-lg">
+                <div>
+                    <h2 class="text-3xl font-extrabold text-center text-white">
+                        Welcome to Go Chat
+                    </h2>
+                </div>
+                <form id="login-form" class="mt-8 space-y-6">
+                    <div class="space-y-4 rounded-md shadow-sm">
+                        <div>
+                            <label for="username" class="sr-only">Username</label>
+                            <input id="username" name="username" type="text" autocomplete="username" required
+                                class="relative block w-full px-3 py-3 text-white placeholder-gray-400 bg-gray-700 border border-gray-600 rounded-md appearance-none focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                                placeholder="Username (e.g., alice, bob)">
+                        </div>
+                        <div>
+                            <label for="password" class="sr-only">Password</label>
+                            <input id="password" name="password" type="password" autocomplete="current-password"
+                                required
+                                class="relative block w-full px-3 py-3 text-white placeholder-gray-400 bg-gray-700 border border-gray-600 rounded-md appearance-none focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                                placeholder="Password (password123)">
+                        </div>
+                    </div>
+
+                    <div>
+                        <button type="submit"
+                            class="relative flex justify-center w-full px-4 py-3 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md group hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 focus:ring-offset-gray-800">
+                            Sign in
+                        </button>
+                    </div>
+                    <p id="login-error" class="text-sm text-center text-red-400"></p>
+                </form>
+            </div>
+        </div>
+
+        <!-- Chat Screen -->
+        <div id="chat-view" class="hidden h-full md:grid md:grid-cols-12">
+            <!-- Sidebar -->
+            <aside class="flex flex-col col-span-3 overflow-y-auto bg-gray-800 border-r border-gray-700">
+                <!-- User Profile -->
+                <div class="p-4 border-b border-gray-700">
+                    <h2 class="text-xl font-bold">Welcome, <span id="current-user"></span></h2>
+                </div>
+
+                <!-- Friend Search -->
+                <div class="p-4 border-b border-gray-700">
+                    <input type="text" id="friend-search" placeholder="Search users..."
+                        class="w-full px-3 py-2 text-sm text-white placeholder-gray-400 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                </div>
+
+                <!-- Users List -->
+                <div class="flex-grow p-4">
+                    <h3 class="mb-2 text-sm font-semibold tracking-wider text-gray-400 uppercase">Direct Messages</h3>
+                    <ul id="user-list" class="space-y-2"></ul>
+                </div>
+
+                <!-- Groups List -->
+                <div class="p-4 border-t border-gray-700">
+                    <h3 class="mb-2 text-sm font-semibold tracking-wider text-gray-400 uppercase">Groups</h3>
+                    <ul id="group-list" class="space-y-2"></ul>
+                </div>
+            </aside>
+
+            <!-- Main Chat Area -->
+            <main class="flex flex-col col-span-9 bg-gray-900">
+                <!-- Chat Header -->
+                <header class="flex items-center justify-between p-4 bg-gray-800 border-b border-gray-700 shadow-md">
+                    <h2 id="chat-with" class="text-xl font-bold">Select a conversation</h2>
+                    <button id="leave-group-btn"
+                        class="hidden px-3 py-1 text-sm text-white bg-red-600 rounded-md hover:bg-red-700">Leave
+                        Group</button>
+                </header>
+
+                <!-- Messages -->
+                <div id="messages-container" class="flex-grow p-6 overflow-y-auto">
+                    <div class="flex items-center justify-center h-full">
+                        <p class="text-gray-400">Your messages will appear here.</p>
+                    </div>
+                </div>
+
+                <!-- Message Input -->
+                <footer class="p-4 bg-gray-800">
+                    <form id="message-form" class="flex items-center space-x-4">
+                        <input id="message-input" type="text" placeholder="Type your message..." autocomplete="off"
+                            required
+                            class="flex-grow px-4 py-3 text-white placeholder-gray-400 bg-gray-700 border border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <button type="submit"
+                            class="p-3 bg-indigo-600 rounded-full hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 focus:ring-offset-gray-800">
+                            <svg class="w-6 h-6 text-white transform rotate-90" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                            </svg>
+                        </button>
+                    </form>
+                </footer>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginView = document.getElementById('login-view');
+            const chatView = document.getElementById('chat-view');
+            const loginForm = document.getElementById('login-form');
+            const loginError = document.getElementById('login-error');
+            const messageForm = document.getElementById('message-form');
+            const messageInput = document.getElementById('message-input');
+            const messagesContainer = document.getElementById('messages-container');
+            const userList = document.getElementById('user-list');
+            const groupList = document.getElementById('group-list');
+            const currentUserSpan = document.getElementById('current-user');
+            const chatWithSpan = document.getElementById('chat-with');
+            const friendSearch = document.getElementById('friend-search');
+            const leaveGroupBtn = document.getElementById('leave-group-btn');
+
+            let ws;
+            let username = '';
+            let activeChat = null; // Can be a username or a group name
+            let activeChatType = 'private'; // 'private' or 'group'
+            const conversations = {}; // Stores messages for each chat
+            const groups = ["General", "Technology", "Random"]; // Predefined groups
+
+            // --- Login Logic ---
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(loginForm);
+                const enteredUsername = formData.get('username');
+                const password = formData.get('password');
+                loginError.textContent = '';
+
+                try {
+                    const response = await fetch('/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username: enteredUsername, password }),
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        username = enteredUsername;
+                        connectWebSocket();
+                    } else {
+                        loginError.textContent = result.message || 'Login failed.';
+                    }
+                } catch (error) {
+                    console.error('Login error:', error);
+                    loginError.textContent = 'An error occurred. Please try again.';
+                }
+            });
+
+            // --- WebSocket Logic ---
+            function connectWebSocket() {
+                // Determine WebSocket protocol based on HTTP protocol
+                const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const host = window.location.host;
+                ws = new WebSocket(`${proto}//${host}/ws?username=${username}`);
+
+                ws.onopen = () => {
+                    console.log('Connected to WebSocket server');
+                    loginView.classList.add('hidden');
+                    chatView.classList.remove('hidden');
+                    chatView.classList.add('grid');
+                    currentUserSpan.textContent = username;
+                    initializeGroups();
+                };
+
+                ws.onmessage = (event) => {
+                    // It's possible to receive multiple JSON objects
+                    const messages = event.data.split('\n');
+                    messages.forEach(msgStr => {
+                        if (msgStr.trim() === '') return;
+                        const message = JSON.parse(msgStr);
+                        handleIncomingMessage(message);
+                    });
+                };
+
+                ws.onclose = () => {
+                    console.log('Disconnected from WebSocket server');
+                    alert('Connection lost. Please login again.');
+                    window.location.reload();
+                };
+
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    loginError.textContent = 'Failed to connect to chat server.';
+                    loginView.classList.remove('hidden');
+                    chatView.classList.add('hidden');
+                };
+            }
+
+            function handleIncomingMessage(message) {
+                switch (message.type) {
+                    case 'user_list':
+                        updateUserList(message.content);
+                        break;
+                    case 'private_message':
+                        storeAndDisplayMessage(message.sender, message);
+                        notify(message.sender);
+                        break;
+                    case 'group_message':
+                        storeAndDisplayMessage(message.recipient, message);
+                        notify(message.recipient);
+                        break;
+                }
+            }
+
+            function storeAndDisplayMessage(chatId, message) {
+                if (!conversations[chatId]) {
+                    conversations[chatId] = [];
+                }
+                conversations[chatId].push(message);
+
+                if (activeChat === chatId) {
+                    renderMessages(chatId);
+                }
+            }
+
+            // --- UI Rendering ---
+            function updateUserList(users) {
+                const filteredUsers = users.filter(u => u !== username);
+                userList.innerHTML = filteredUsers.map(user => `
+                    <li id="user-${user}" data-username="${user}" class="relative px-4 py-3 -mx-2 font-medium rounded-lg cursor-pointer hover:bg-gray-700 transition-colors duration-200">
+                        ${user}
+                    </li>
+                `).join('');
+
+                // Re-attach event listeners
+                userList.querySelectorAll('li').forEach(item => {
+                    item.addEventListener('click', () => {
+                        startChat(item.dataset.username, 'private');
+                    });
+                });
+            }
+
+            function initializeGroups() {
+                groupList.innerHTML = groups.map(group => `
+                    <li id="group-${group}" data-groupname="${group}" class="relative flex items-center justify-between px-4 py-3 -mx-2 font-medium rounded-lg cursor-pointer hover:bg-gray-700 transition-colors duration-200">
+                        <span># ${group}</span>
+                        <button data-group="${group}" class="join-btn px-2 py-0.5 text-xs text-white bg-green-600 rounded-full hover:bg-green-700">Join</button>
+                    </li>
+                `).join('');
+
+                groupList.querySelectorAll('.join-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const groupName = e.target.dataset.group;
+                        joinGroup(groupName, e.target);
+                    });
+                });
+            }
+
+            function joinGroup(groupName, button) {
+                sendMessage({
+                    type: 'join_group',
+                    content: groupName,
+                });
+                button.textContent = 'Joined';
+                button.disabled = true;
+                button.classList.remove('bg-green-600', 'hover:bg-green-700');
+                button.classList.add('bg-gray-500', 'cursor-not-allowed');
+
+                const groupLi = document.getElementById(`group-${groupName}`);
+                groupLi.addEventListener('click', () => {
+                    startChat(groupName, 'group');
+                });
+            }
+
+            function startChat(name, type) {
+                activeChat = name;
+                activeChatType = type;
+
+                // Reset styles for all list items
+                document.querySelectorAll('#user-list li, #group-list li').forEach(li => {
+                    li.classList.remove('bg-indigo-600');
+                });
+
+                // Apply active style
+                const activeElId = type === 'group' ? `group-${name}` : `user-${name}`;
+                const activeEl = document.getElementById(activeElId);
+                if (activeEl) {
+                    activeEl.classList.add('bg-indigo-600');
+                    // Remove notification dot if present
+                    const dot = activeEl.querySelector('.notification-dot');
+                    if (dot) dot.remove();
+                }
+
+                chatWithSpan.textContent = type === 'group' ? `# ${name}` : name;
+                leaveGroupBtn.classList.toggle('hidden', type !== 'group');
+                renderMessages(name);
+            }
+
+            function renderMessages(chatId) {
+                const messages = conversations[chatId] || [];
+                if (messages.length === 0 && chatId) {
+                    messagesContainer.innerHTML = `<div class="flex items-center justify-center h-full"><p class="text-gray-400">This is the beginning of your conversation with ${activeChatType === 'group' ? '#' : ''}${chatId}.</p></div>`;
+                    return;
+                }
+                messagesContainer.innerHTML = messages.map(msg => {
+                    const isSelf = msg.sender === username;
+                    const bubbleClasses = isSelf
+                        ? 'bg-indigo-600 ml-auto'
+                        : 'bg-gray-700 mr-auto';
+                    const senderName = isSelf ? 'You' : msg.sender;
+
+                    return `
+                        <div class="flex flex-col mb-4 ${isSelf ? 'items-end' : 'items-start'}">
+                            ${activeChatType === 'group' && !isSelf ? `<span class="text-xs text-gray-400 mb-1">${senderName}</span>` : ''}
+                            <div class="max-w-md p-3 text-white rounded-lg shadow ${bubbleClasses}">
+                                <p>${escapeHTML(msg.content)}</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            // --- Message Sending ---
+            messageForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (!activeChat || !messageInput.value.trim()) return;
+
+                const message = {
+                    type: activeChatType === 'group' ? 'group_message' : 'private_message',
+                    recipient: activeChat,
+                    content: messageInput.value,
+                };
+
+                sendMessage(message);
+
+                // Add message to local conversation immediately for better UX
+                const sentMessage = { ...message, sender: username };
+                storeAndDisplayMessage(activeChat, sentMessage);
+
+                messageInput.value = '';
+                messageInput.focus();
+            });
+
+            function sendMessage(messageObject) {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify(messageObject));
+                }
+            }
+
+            // --- Friend Search ---
+            friendSearch.addEventListener('keyup', () => {
+                const filter = friendSearch.value.toLowerCase();
+                document.querySelectorAll('#user-list li').forEach(li => {
+                    const username = li.dataset.username.toLowerCase();
+                    li.style.display = username.includes(filter) ? '' : 'none';
+                });
+            });
+
+            // --- Leave Group ---
+            leaveGroupBtn.addEventListener('click', () => {
+                if (activeChatType !== 'group' || !activeChat) return;
+
+                const groupName = activeChat;
+                sendMessage({ type: 'leave_group', content: groupName });
+
+                // Reset UI
+                const joinBtn = document.querySelector(`#group-${groupName} .join-btn`);
+                if (joinBtn) {
+                    joinBtn.textContent = 'Join';
+                    joinBtn.disabled = false;
+                    joinBtn.classList.remove('bg-gray-500', 'cursor-not-allowed');
+                    joinBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                }
+
+                const groupLi = document.getElementById(`group-${groupName}`);
+                groupLi.replaceWith(groupLi.cloneNode(true)); // remove old event listener
+                initializeGroups(); // Re-initialize to re-attach join listener
+
+                delete conversations[groupName];
+                activeChat = null;
+                activeChatType = 'private';
+                chatWithSpan.textContent = 'Select a conversation';
+                messagesContainer.innerHTML = '<div class="flex items-center justify-center h-full"><p class="text-gray-400">You have left the group. Select a new conversation.</p></div>';
+                leaveGroupBtn.classList.add('hidden');
+            });
+
+            // --- Utilities ---
+            function notify(chatId) {
+                if (activeChat === chatId) return; // Don't notify for active chat
+
+                const isGroup = groups.includes(chatId);
+                const elId = isGroup ? `group-${chatId}` : `user-${chatId}`;
+                const el = document.getElementById(elId);
+
+                if (el && !el.querySelector('.notification-dot')) {
+                    const dot = document.createElement('span');
+                    dot.className = 'notification-dot';
+                    el.appendChild(dot);
+                }
+            }
+
+            function escapeHTML(str) {
+                return str.replace(/[&<>'"]/g,
+                    tag => ({
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        "'": '&#39;',
+                        '"': '&quot;'
+                    }[tag] || tag)
+                );
+            }
+
+        });
+    </script>
+</body>
+
+</html>
